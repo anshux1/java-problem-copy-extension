@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Problem Statement Copier",
+  "description": "Copies eLab-style programming problems and all test-case requirements as structured Markdown.",
+  "version": "1.0.0",
+  "permissions": [
+    "activeTab",
+    "clipboardWrite",
+    "scripting"
+  ],
+  "action": {
+    "default_title": "Copy problem statement",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["content.css"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
