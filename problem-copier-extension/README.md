@@ -1,8 +1,8 @@
-# Problem Statement Copier
+# eLab Problem Copier & Solver
 
 A Manifest V3 browser extension for the eLab-style online code submitter shown in `../layout.html`.
 
-It copies the problem description, functional description, constraints, input/output format, logical test cases, mandatory test cases, and complexity test cases as readable Markdown. It also appends Java solving instructions and enables text selection on supported problem pages.
+It copies the problem description, functional description, constraints, input/output format, logical test cases, mandatory test cases, and complexity test cases as readable Markdown. It also injects a native-looking **Solve It** action below the Ace editor once the companion Worker is configured.
 
 ## Install in Chrome / Edge
 
@@ -17,10 +17,14 @@ Use either:
 - the blue **Copy problem** button at the bottom-right of the problem page, or
 - the extension icon in the browser toolbar and **Copy problem and test cases**.
 
+The Code Editor footer also becomes **Save · Reset · Solve It · Run · Evaluate**. **Solve It** reads the current starter code, asks the configured Worker for a Java solution, and injects the result for review. It never clicks Run or Evaluate.
+
 The extension opens collapsed test-case sections when necessary so their contents are included. The clipboard output is Markdown and ends with a solver prompt for Java.
 
 ## Notes
 
 - The content script currently uses `<all_urls>` because the submitter URL was not provided. For least privilege, replace it in `manifest.json` with the submitter's actual URL pattern, for example `https://submitter.example.com/*`, then reload the extension.
 - Browser-internal pages such as `chrome://extensions` cannot be modified by extensions.
-- No network requests or external libraries are used.
+- Solver requests go through `service-worker.js`; the OpenCode API key remains in the Cloudflare Worker and is never shipped in the extension.
+- Before using **Solve It**, deploy `../solver-worker` and replace `SOLVER_ENDPOINT` in `service-worker.js`. Until then, the button shows a configuration error without changing the editor.
+- Free-model prompts may be retained or used for provider improvement. Do not send private or personal code.

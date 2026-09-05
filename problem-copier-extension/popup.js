@@ -50,6 +50,11 @@
       // or a page where the content script was not injected yet.
       try {
         await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ["page-bridge.js"],
+          world: "MAIN"
+        });
         await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
         response = await sendCopyMessage(tab.id);
       } catch (injectionError) {

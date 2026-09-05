@@ -1,0 +1,5 @@
+node_modules/
+.wrangler/
+dist/
+solver-worker/.dev.vars
+*.log

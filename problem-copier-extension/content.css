@@ -5,6 +5,60 @@ html.problem-copier-selection-enabled body *:not(button):not(input):not(textarea
   user-select: text !important;
 }
 
+#elab-solve-action #elab-solve-button {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+#elab-solve-action #elab-solve-button:hover,
+#elab-solve-action #elab-solve-button:focus {
+  color: #15803d;
+}
+
+#elab-solve-action #elab-solve-button:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid #86efac;
+  outline-offset: 2px;
+}
+
+#elab-solve-action #elab-solve-button.elab-solve-failed {
+  color: #b91c1c;
+}
+
+#elab-solve-action #elab-solve-button[disabled] {
+  cursor: wait;
+}
+
+#elab-solve-action .elab-solve-icon {
+  display: inline-block;
+  margin-right: 8px;
+  line-height: 1;
+}
+
+#elab-solve-action .elab-solve-loading .elab-solve-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  color: transparent;
+  vertical-align: -2px;
+  animation: elab-solver-spin 700ms linear infinite;
+}
+
+#ace-editor.elab-solver-editor-success {
+  outline: 2px solid #22c55e;
+  outline-offset: -2px;
+  transition: outline-color 180ms ease;
+}
+
+@keyframes elab-solver-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 #problem-copier-button {
   position: fixed;
   right: 22px;

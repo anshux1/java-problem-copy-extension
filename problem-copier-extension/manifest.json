@@ -1,18 +1,32 @@
 {
   "manifest_version": 3,
-  "name": "Problem Statement Copier",
-  "description": "Copies eLab-style programming problems and all test-case requirements as structured Markdown.",
-  "version": "1.0.0",
+  "name": "eLab Problem Copier & Solver",
+  "description": "Copies eLab programming problems and can inject AI-generated Java solutions for review.",
+  "version": "1.1.0",
   "permissions": [
     "activeTab",
     "clipboardWrite",
     "scripting"
   ],
+  "host_permissions": [
+    "https://*.workers.dev/*",
+    "http://127.0.0.1:8787/*",
+    "http://localhost:8787/*"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
   "action": {
     "default_title": "Copy problem statement",
     "default_popup": "popup.html"
   },
   "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["page-bridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
     {
       "matches": ["<all_urls>"],
       "css": ["content.css"],
