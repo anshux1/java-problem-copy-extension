@@ -5,4 +5,4 @@ account_id = "74a6d5abde822a4f01857dca197a81d5"
 
 [vars]
 ALLOWED_ORIGIN = "*"
-ZEN_MODELS = "big-pickle,mimo-v2.5-free,nemotron-3.5-lightning-free,ling-3.0-flash-fin-free"
+ZEN_MODELS = "muse-spark-1.3-contributor-free,ling-3.0-flash-fin-free,nemotron-3.5-lightning-free,muse-spark-1.2-contributor-free,nemotron-3-ultra-free,mimo-v2.5-free,big-pickle"

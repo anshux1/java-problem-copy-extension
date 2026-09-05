@@ -34,6 +34,18 @@ describe("Zen response handling", () => {
     ]);
   });
 
+  it("uses the latest free-model order by default", () => {
+    expect(modelChain()).toEqual([
+      "muse-spark-1.3-contributor-free",
+      "ling-3.0-flash-fin-free",
+      "nemotron-3.5-lightning-free",
+      "muse-spark-1.2-contributor-free",
+      "nemotron-3-ultra-free",
+      "mimo-v2.5-free",
+      "big-pickle"
+    ]);
+  });
+
   it("normalizes a successful chat-completions response", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({
@@ -53,14 +65,17 @@ describe("Zen response handling", () => {
       "https://opencode.ai/zen/v1/chat/completions",
       expect.objectContaining({ method: "POST" })
     );
+    const chatBody = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(chatBody.reasoning_effort).toBe("high");
   });
 
   it("normalizes a successful Responses API result", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+    const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({
         output: [{ content: [{ type: "output_text", text: `\`\`\`java\n${validSolution}\n\`\`\`` }] }]
       }), { status: 200, headers: { "Content-Type": "application/json" } })
-    ));
+    );
+    vi.stubGlobal("fetch", fetchMock);
 
     const result = await solveWithZen(sampleRequest, {
       OPENCODE_API_KEY: "test-key",
@@ -68,5 +83,7 @@ describe("Zen response handling", () => {
     });
     expect(result.model).toBe("muse-spark-1.3-contributor-free");
     expect(result.code).toBe(validSolution);
+    const responsesBody = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(responsesBody.reasoning).toEqual({ effort: "high" });
   });
 });

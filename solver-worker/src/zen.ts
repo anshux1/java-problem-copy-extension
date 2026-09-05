@@ -4,21 +4,26 @@ import type { SolveRequest, SolveSuccess } from "./schema";
 type ApiKind = "chat" | "responses";
 
 export const VERIFIED_FREE_MODELS: Record<string, ApiKind> = {
-  "big-pickle": "chat",
-  "mimo-v2.5-free": "chat",
   "ling-3.0-flash-fin-free": "chat",
-  "nemotron-3-ultra-free": "chat",
   "nemotron-3.5-lightning-free": "chat",
-  "muse-spark-1.3-contributor-free": "responses"
+  "nemotron-3-ultra-free": "chat",
+  "mimo-v2.5-free": "chat",
+  "big-pickle": "chat",
+  "muse-spark-1.3-contributor-free": "responses",
+  "muse-spark-1.2-contributor-free": "responses"
 };
 
 const DEFAULT_MODELS = [
-  "big-pickle",
-  "mimo-v2.5-free",
+  "muse-spark-1.3-contributor-free",
+  "ling-3.0-flash-fin-free",
   "nemotron-3.5-lightning-free",
-  "ling-3.0-flash-fin-free"
+  "muse-spark-1.2-contributor-free",
+  "nemotron-3-ultra-free",
+  "mimo-v2.5-free",
+  "big-pickle"
 ];
 const ZEN_BASE_URL = "https://opencode.ai/zen/v1";
+const REASONING_EFFORT = "high";
 const ATTEMPT_TIMEOUT_MS = 18_000;
 const TOTAL_TIMEOUT_MS = 52_000;
 
@@ -104,7 +109,8 @@ async function callModel(model: string, kind: ApiKind, prompt: string, apiKey: s
       ? {
           model,
           temperature: 0.1,
-          max_tokens: 3500,
+          max_tokens: 5000,
+          reasoning_effort: REASONING_EFFORT,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: prompt }
@@ -114,7 +120,8 @@ async function callModel(model: string, kind: ApiKind, prompt: string, apiKey: s
           model,
           instructions: SYSTEM_PROMPT,
           input: prompt,
-          max_output_tokens: 3500
+          max_output_tokens: 5000,
+          reasoning: { effort: REASONING_EFFORT }
         };
 
     const response = await fetch(endpoint, {

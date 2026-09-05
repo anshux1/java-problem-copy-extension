@@ -31,7 +31,8 @@ After deployment, register the `workers.dev` subdomain if Cloudflare prompts for
 
 Configuration lives in `wrangler.toml`:
 
-- `ZEN_MODELS` is a comma-separated fallback chain restricted by the code's verified-free allowlist.
+- `ZEN_MODELS` is a comma-separated fallback chain restricted by the code's verified-free allowlist. The deployed default order starts with Muse Spark 1.3 Free, followed by Ling 3.0 Flash Fin, Nemotron 3.5 Lightning, Muse Spark 1.2, Nemotron 3 Ultra, MiMo V2.5, and Big Pickle.
+- Every model attempt requests the highest reasoning setting supported by its API (`reasoning_effort: "high"` for chat completions and `reasoning: { effort: "high" }` for Responses).
 - `ALLOWED_ORIGIN` defaults to `*` for initial extension setup. Replace it with the installed extension origin where practical.
 - `OPENCODE_API_KEY` must be a Wrangler secret; never put it in `wrangler.toml` or extension files.
 

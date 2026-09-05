@@ -4,7 +4,7 @@
 > Repo current state: `problem-copier-extension/content.js` already scrapes Problem / Input / Output / Logical / Mandatory / Complexity + builds Markdown. We reuse it.
 > Server choice: **Cloudflare Workers + Hono (TypeScript)** — free, no cold-start, keeps Zen key secret.
 > Provider contract last verified: 2026-09-05 (UTC)
-> Build status: DOM injection, structured extraction, Ace bridge, extension service worker, Worker API, Zen adapters, validation, tests, and the distributable ZIP are implemented. The Worker is created as `elab-solver`; remaining setup is workers.dev subdomain registration and the owner's Zen API key.
+> Build status: DOM injection, structured extraction, Ace bridge, extension service worker, Worker API, Zen adapters, validation, tests, deployment, secret configuration, and the distributable ZIP are implemented. The live Worker is `elab-solver` at `https://elab-solver.elab-solver-worker.workers.dev`. Health and model-list checks pass; a live solve request reaches Zen but may still be rejected by upstream free-tier rate limits/timeouts.
 
 ---
 
@@ -36,29 +36,34 @@ No auto-run and no auto-evaluate. The existing **Copy problem** button and popup
 
 Source of truth: `GET https://opencode.ai/zen/v1/models` + `https://opencode.ai/docs/zen/` pricing table.
 
-### 3.1 Confirmed FREE in docs pricing table (Free in / Free out)
+### 3.1 Current free-model chain (latest requested order)
 
 | # | Display name | Model ID to send | Endpoint | SDK type | Use for |
 |---|---|---|---|---|---|
-| 1 | Big Pickle (stealth, best for code eval) | `big-pickle` | `https://opencode.ai/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` | Primary |
-| 2 | MiMo-V2.5 Free | `mimo-v2.5-free` | `.../zen/v1/chat/completions` | `openai-compatible` | Fallback 1 |
-| 3 | Nemotron 3 Ultra Free | `nemotron-3-ultra-free` | `.../zen/v1/chat/completions` | `openai-compatible` | Fallback 2 |
-| 4 | Nemotron 3.5 Lightning Free | `nemotron-3.5-lightning-free` | `.../zen/v1/chat/completions` | `openai-compatible` | Fallback 3, fast |
-| 5 | Ling 3.0 Flash Fin Free | `ling-3.0-flash-fin-free` | `.../zen/v1/chat/completions` | `openai-compatible` | Fallback 4 |
-| 6 | Muse Spark 1.3 Contributor Free | `muse-spark-1.3-contributor-free` | `https://opencode.ai/zen/v1/responses` | `@ai-sdk/openai` (Responses API) | Alternate, different parser |
+| 1 | Muse Spark 1.3 Free | `muse-spark-1.3-contributor-free` | `https://opencode.ai/zen/v1/responses` | OpenAI Responses API | **Default / primary** |
+| 2 | Ling 3.0 Flash Fin Free | `ling-3.0-flash-fin-free` | `.../zen/v1/chat/completions` | OpenAI-compatible chat | Fallback 1 |
+| 3 | Nemotron 3.5 Lightning Free | `nemotron-3.5-lightning-free` | `.../zen/v1/chat/completions` | OpenAI-compatible chat | Fallback 2 |
+| 4 | Muse Spark 1.2 Free | `muse-spark-1.2-contributor-free` | `https://opencode.ai/zen/v1/responses` | OpenAI Responses API | Fallback 3 |
+| 5 | Nemotron 3 Ultra Free | `nemotron-3-ultra-free` | `.../zen/v1/chat/completions` | OpenAI-compatible chat | Fallback 4 |
+| 6 | MiMo V2.5 Free | `mimo-v2.5-free` | `.../zen/v1/chat/completions` | OpenAI-compatible chat | Fallback 5 |
+| 7 | Big Pickle | `big-pickle` | `.../zen/v1/chat/completions` | OpenAI-compatible chat | Fallback 6 |
+
+The display names above follow the latest free-model list supplied for this project. The `-contributor-free` suffix is the provider's API ID for both Muse Spark entries.
+
+Every attempt, including every fallback, requests the model's highest reasoning level (`high`). Chat models receive `reasoning_effort: "high"`; Responses models receive `reasoning: { "effort": "high" }`. This is provider configuration, not a client-side hint, so changing the model cannot silently lower reasoning.
 
 ### 3.2 Present in live `/models` but NOT in docs pricing table (treat as experimental)
 
-Fetched raw `data[].id` on 2026-09-05 included:
+Fetched raw `data[].id` on 2026-09-05 also included:
 
 ```
 deepseek-v4-flash-free
 muse-spark-1.2-contributor-free
 ```
 
-These end in `-free`, likely also `.../zen/v1/chat/completions`, but docs don't guarantee Free pricing. Try them manually once; if billed / 404, drop them. Do NOT put them first in chain.
+`muse-spark-1.2-contributor-free` is now included because it appears in the requested latest list and the live catalog; its Responses API behavior and free-tier availability should be rechecked if the provider rotates models. `deepseek-v4-flash-free` remains excluded because it was not in the requested list.
 
-The live endpoint contained eight free-like IDs: `big-pickle`, `deepseek-v4-flash-free`, `muse-spark-1.3-contributor-free`, `muse-spark-1.2-contributor-free`, `mimo-v2.5-free`, `ling-3.0-flash-fin-free`, `nemotron-3-ultra-free`, and `nemotron-3.5-lightning-free`. Only IDs also documented as free belong in the production allowlist.
+The live endpoint contained eight free-like IDs: `big-pickle`, `deepseek-v4-flash-free`, `muse-spark-1.3-contributor-free`, `muse-spark-1.2-contributor-free`, `mimo-v2.5-free`, `ling-3.0-flash-fin-free`, `nemotron-3-ultra-free`, and `nemotron-3.5-lightning-free`. The server allowlist intentionally contains only the seven IDs in §3.1.
 
 > Free = promo, "limited time to collect feedback". Expect rotation. Keep a reviewed allowlist in server code and verify it against both `/models` and the official pricing table before releases; a `-free` suffix alone is not enough.
 
@@ -79,7 +84,8 @@ curl https://opencode.ai/zen/v1/chat/completions \
   -d '{
     "model": "big-pickle",
     "temperature": 0.2,
-    "max_tokens": 2500,
+    "max_tokens": 5000,
+    "reasoning_effort": "high",
     "messages": [
       {"role": "system", "content": "You are a Java 11 solver. Return ONLY code in one ```java block."},
       {"role": "user", "content": "Solve..."}
@@ -97,7 +103,8 @@ curl https://opencode.ai/zen/v1/responses \
   -d '{
     "model": "muse-spark-1.3-contributor-free",
     "input": "Solve this Java problem... Return ONLY code",
-    "max_output_tokens": 2500
+    "max_output_tokens": 5000,
+    "reasoning": {"effort": "high"}
   }'
 # -> resp.output_text or resp.output[].content[].text, parse ```java inside
 ```
@@ -200,8 +207,12 @@ Solver Instructions: satisfy every test, include every mandatory keyword exactly
 ### 4.5 Zen caller (`zen.ts`) logic
 
 ```
-FREE_CHAIN = ["big-pickle","mimo-v2.5-free","nemotron-3-ultra-free","nemotron-3.5-lightning-free","ling-3.0-flash-fin-free"]
-+ optional ["muse-spark-1.3-contributor-free"] via Responses API
+FREE_CHAIN = [
+  "muse-spark-1.3-contributor-free", "ling-3.0-flash-fin-free",
+  "nemotron-3.5-lightning-free", "muse-spark-1.2-contributor-free",
+  "nemotron-3-ultra-free", "mimo-v2.5-free", "big-pickle"
+]
+REASONING_EFFORT = "high" for every chain attempt
 
 for model in chain:
   try fetch with 40s timeout (AbortSignal)
@@ -442,6 +453,6 @@ The MVP is complete only when all of the following are true:
 - [x] Phase 1 — Data slice: introduce `collectProblemData()` and `renderProblemMarkdown()` while preserving current clipboard output; add payload limits and fixtures.
 - [x] Phase 2 — Editor slice: add `page-bridge.js`, read/write request helpers, timeouts, verification, and manifest main-world registration.
 - [x] Phase 3 — Server slice: scaffold `solver-worker/` (`index.ts`, `prompts.ts`, `zen.ts`), validate the API contract, test code extraction/mandatory checks, and verify configured model IDs.
-- [ ] Phase 4 — End-to-end deployment: Worker upload is complete and `service-worker.js` points at the deployed endpoint. Remaining: register the workers.dev subdomain, set `OPENCODE_API_KEY`, and verify one live solve.
+- [x] Phase 4 — End-to-end deployment: Worker upload is complete, `service-worker.js` points at the deployed endpoint, the `workers.dev` subdomain is registered, `OPENCODE_API_KEY` is configured as a Wrangler secret, and `/health` + `/models` are verified. A live `/solve` request reaches Zen; upstream free-tier 429s/timeouts remain an operational limitation.
 - [ ] Phase 5 — Production hardening: deploy Worker, set secrets and spending/rate limits, restrict extension match patterns and CORS, test live eLab rerenders/navigation, and add basic latency/error telemetry without problem text.
 - [ ] Phase 6 — Optional UX: model picker, history, popup Solve entry, and removal/relocation of the floating Copy button only after the MVP acceptance criteria pass.
