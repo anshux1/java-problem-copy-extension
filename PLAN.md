@@ -215,7 +215,7 @@ FREE_CHAIN = [
 REASONING_EFFORT = "high" for every chain attempt
 
 for model in chain:
-  try fetch with 40s timeout (AbortSignal)
+  try fetch with a 24s per-model timeout (AbortSignal), capped at 58s total
   if 429/5xx/timeout -> continue
   extract code via /```(?:java)?\n([\s\S]*?)```/ else raw
   strip language tag, trim

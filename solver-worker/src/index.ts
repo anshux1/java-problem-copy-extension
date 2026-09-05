@@ -102,10 +102,22 @@ app.post("/solve", async (context) => {
     cache.set(cacheKey, { value: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return context.json(result);
   } catch (error) {
+    const details = error instanceof Error ? error.message : "";
+    const failures = details.match(/All models failed \((.*)\)$/)?.[1]?.split(" | ") ?? [];
+    const providerLimited = failures.length > 0 && failures.every((failure) =>
+      /upstream_http_429|timeout/.test(failure)
+    );
     console.error("solve_failed", {
       type: error instanceof Error ? error.name : "UnknownError",
-      categories: error instanceof Error ? error.message.slice(0, 500) : "unknown"
+      categories: details.slice(0, 500) || "unknown"
     });
+    if (providerLimited) {
+      context.header("Retry-After", "30");
+      return context.json({
+        ok: false,
+        error: "The free model provider is temporarily rate-limited. Try again in about 30 seconds."
+      }, 429);
+    }
     return context.json({ ok: false, error: "All configured solver models failed." }, 502);
   }
 });

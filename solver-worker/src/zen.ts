@@ -24,8 +24,10 @@ const DEFAULT_MODELS = [
 ];
 const ZEN_BASE_URL = "https://opencode.ai/zen/v1";
 const REASONING_EFFORT = "high";
-const ATTEMPT_TIMEOUT_MS = 18_000;
-const TOTAL_TIMEOUT_MS = 52_000;
+// High-reasoning free models can need more than 18 seconds on a long problem.
+// Keep the total below the extension's 60-second request timeout.
+const ATTEMPT_TIMEOUT_MS = 24_000;
+const TOTAL_TIMEOUT_MS = 58_000;
 
 export type ZenEnv = {
   OPENCODE_API_KEY: string;
@@ -46,6 +48,26 @@ class ZenRequestError extends Error {
 
 function asNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function containsMandatoryFragment(code: string, fragment: string): boolean {
+  if (code.includes(fragment)) return true;
+
+  // eLab sometimes removes spaces from Java snippets and truncates a for-loop
+  // increment (for example, `for(int i=0;i<n;i)`). Compare compact forms and
+  // accept the normal ++/-- increment before the closing parenthesis.
+  const compactCode = code.replace(/\s+/g, "");
+  const compactFragment = fragment.replace(/\s+/g, "");
+  if (compactCode.includes(compactFragment)) return true;
+  if (compactFragment.startsWith("for(") && compactFragment.endsWith(")")) {
+    const loopPrefix = compactFragment.slice(0, -1);
+    return new RegExp(`${escapeRegExp(loopPrefix)}(?:\\+\\+|--|\\+=1|=\\w+\\+1)?\\)`).test(compactCode);
+  }
+  return false;
 }
 
 export function modelChain(configured?: string): string[] {
@@ -79,7 +101,7 @@ export function validateSolution(code: string, input: SolveRequest): string[] {
   if (!/\bstatic\s+void\s+main\s*\(/.test(cleanCode)) errors.push("missing main method");
 
   for (const fragment of mandatoryFragments(input)) {
-    if (!cleanCode.includes(fragment)) errors.push(`missing mandatory fragment: ${fragment.slice(0, 120)}`);
+    if (!containsMandatoryFragment(cleanCode, fragment)) errors.push(`missing mandatory fragment: ${fragment.slice(0, 120)}`);
   }
   return errors;
 }

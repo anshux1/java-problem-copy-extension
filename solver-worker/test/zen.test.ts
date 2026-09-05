@@ -27,6 +27,24 @@ describe("Zen response handling", () => {
     );
   });
 
+  it("accepts formatted Java loops when eLab truncates the increment in a requirement", () => {
+    const input = {
+      ...sampleRequest,
+      mandatory: [
+        { title: "Loop", fields: [{ label: "KEYWORD", value: "for(int i=0;i<n;i)" }] },
+        { title: "Sort", fields: [{ label: "KEYWORD", value: "sort" }] }
+      ]
+    };
+    const code = `public class ClassRA2682241010202 {
+      public static void main(String[] args) {
+        int[] values = {3, 1}; int n = values.length;
+        for (int i = 0; i < n; i++) { }
+        Arrays.sort(values);
+      }
+    }`;
+    expect(validateSolution(code, input)).toEqual([]);
+  });
+
   it("ignores unsupported configured models", () => {
     expect(modelChain("paid-model,big-pickle,big-pickle,mimo-v2.5-free")).toEqual([
       "big-pickle",
