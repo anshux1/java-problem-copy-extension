@@ -1,7 +1,6 @@
 "use strict";
 
-// Replace this after `npm run deploy` in solver-worker prints the production URL.
-const SOLVER_ENDPOINT = "https://elab-solver.YOUR-SUBDOMAIN.workers.dev/solve";
+const SOLVER_ENDPOINT = "https://elab-solver.elab-solver-worker.workers.dev/solve";
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_PAYLOAD_BYTES = 50 * 1024;
 const MAX_RESPONSE_BYTES = 120 * 1024;
@@ -36,7 +35,6 @@ function errorResult(code, detail) {
 
 async function solve(payload) {
   if (!validatePayload(payload)) return errorResult("BAD_PAYLOAD");
-  if (SOLVER_ENDPOINT.includes("YOUR-SUBDOMAIN")) return errorResult("NOT_CONFIGURED");
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);

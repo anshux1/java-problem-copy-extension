@@ -4,7 +4,7 @@
 > Repo current state: `problem-copier-extension/content.js` already scrapes Problem / Input / Output / Logical / Mandatory / Complexity + builds Markdown. We reuse it.
 > Server choice: **Cloudflare Workers + Hono (TypeScript)** — free, no cold-start, keeps Zen key secret.
 > Provider contract last verified: 2026-09-05 (UTC)
-> Build status: DOM injection, structured extraction, Ace bridge, extension service worker, Worker API, Zen adapters, validation, tests, and the distributable ZIP are implemented. Local result: 17 tests passing, TypeScript clean, Wrangler dry-run clean. Live deployment remains pending because it requires the owner's Cloudflare account, Zen API key, and final Worker URL.
+> Build status: DOM injection, structured extraction, Ace bridge, extension service worker, Worker API, Zen adapters, validation, tests, and the distributable ZIP are implemented. The Worker is created as `elab-solver`; remaining setup is workers.dev subdomain registration and the owner's Zen API key.
 
 ---
 
@@ -442,6 +442,6 @@ The MVP is complete only when all of the following are true:
 - [x] Phase 1 — Data slice: introduce `collectProblemData()` and `renderProblemMarkdown()` while preserving current clipboard output; add payload limits and fixtures.
 - [x] Phase 2 — Editor slice: add `page-bridge.js`, read/write request helpers, timeouts, verification, and manifest main-world registration.
 - [x] Phase 3 — Server slice: scaffold `solver-worker/` (`index.ts`, `prompts.ts`, `zen.ts`), validate the API contract, test code extraction/mandatory checks, and verify configured model IDs.
-- [ ] Phase 4 — End-to-end deployment: `service-worker.js` and the message/loading/error path are implemented and tested with a fake response. Remaining: deploy with a real Zen key, set `SOLVER_ENDPOINT`, and verify one live solve.
+- [ ] Phase 4 — End-to-end deployment: Worker upload is complete and `service-worker.js` points at the deployed endpoint. Remaining: register the workers.dev subdomain, set `OPENCODE_API_KEY`, and verify one live solve.
 - [ ] Phase 5 — Production hardening: deploy Worker, set secrets and spending/rate limits, restrict extension match patterns and CORS, test live eLab rerenders/navigation, and add basic latency/error telemetry without problem text.
 - [ ] Phase 6 — Optional UX: model picker, history, popup Solve entry, and removal/relocation of the floating Copy button only after the MVP acceptance criteria pass.

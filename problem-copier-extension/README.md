@@ -26,5 +26,5 @@ The extension opens collapsed test-case sections when necessary so their content
 - The content script currently uses `<all_urls>` because the submitter URL was not provided. For least privilege, replace it in `manifest.json` with the submitter's actual URL pattern, for example `https://submitter.example.com/*`, then reload the extension.
 - Browser-internal pages such as `chrome://extensions` cannot be modified by extensions.
 - Solver requests go through `service-worker.js`; the OpenCode API key remains in the Cloudflare Worker and is never shipped in the extension.
-- Before using **Solve It**, deploy `../solver-worker` and replace `SOLVER_ENDPOINT` in `service-worker.js`. Until then, the button shows a configuration error without changing the editor.
+- Before using **Solve It**, register the Worker URL and set `OPENCODE_API_KEY` as described in `../solver-worker/README.md`. The checked-in service worker already targets the deployed Worker endpoint.
 - Free-model prompts may be retained or used for provider improvement. Do not send private or personal code.

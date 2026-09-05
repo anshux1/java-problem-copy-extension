@@ -27,7 +27,7 @@ npx wrangler secret put OPENCODE_API_KEY
 npm run deploy
 ```
 
-After deployment, paste the generated `/solve` URL into `SOLVER_ENDPOINT`, replace the wildcard `workers.dev` host permission with the exact Worker host, and reload the extension.
+After deployment, register the `workers.dev` subdomain if Cloudflare prompts for it. The checked-in extension endpoint is `https://elab-solver.elab-solver-worker.workers.dev/solve`; if you choose a different Worker URL, update `service-worker.js`, replace the wildcard `workers.dev` host permission with the exact Worker host, and reload the extension.
 
 Configuration lives in `wrangler.toml`:
 

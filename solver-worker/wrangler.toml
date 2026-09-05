@@ -1,6 +1,7 @@
 name = "elab-solver"
 main = "src/index.ts"
 compatibility_date = "2026-09-05"
+account_id = "74a6d5abde822a4f01857dca197a81d5"
 
 [vars]
 ALLOWED_ORIGIN = "*"
