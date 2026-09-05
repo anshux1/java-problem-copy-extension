@@ -32,6 +32,13 @@ type ModelResult = {
   usage?: { input?: number; output?: number };
 };
 
+class ZenRequestError extends Error {
+  constructor(readonly status: number | null, message: string) {
+    super(message);
+    this.name = "ZenRequestError";
+  }
+}
+
 function asNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
@@ -123,7 +130,7 @@ async function callModel(model: string, kind: ApiKind, prompt: string, apiKey: s
     const body = (await response.json().catch(() => null)) as Record<string, any> | null;
     if (!response.ok) {
       const message = typeof body?.error?.message === "string" ? body.error.message : `Zen returned HTTP ${response.status}`;
-      throw new Error(message);
+      throw new ZenRequestError(response.status, message);
     }
     if (!body) throw new Error("Zen returned invalid JSON");
 
@@ -159,13 +166,18 @@ export async function solveWithZen(input: SolveRequest, env: ZenEnv): Promise<So
       const code = extractJavaCode(result.text);
       const errors = validateSolution(code, input);
       if (errors.length) {
-        failures.push(`${model}: ${errors.join("; ")}`);
+        failures.push(`${model}: validation_failed`);
         continue;
       }
       return { ok: true, code, model, tried, usage: result.usage };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      failures.push(`${model}: ${message.slice(0, 200)}`);
+      if (error instanceof ZenRequestError) {
+        failures.push(`${model}: upstream_http_${error.status ?? "unknown"}`);
+      } else if (error instanceof Error && error.name === "AbortError") {
+        failures.push(`${model}: timeout`);
+      } else {
+        failures.push(`${model}: adapter_error`);
+      }
     }
   }
 

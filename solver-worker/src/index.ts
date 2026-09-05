@@ -102,7 +102,10 @@ app.post("/solve", async (context) => {
     cache.set(cacheKey, { value: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return context.json(result);
   } catch (error) {
-    console.error("solve_failed", { type: error instanceof Error ? error.name : "UnknownError" });
+    console.error("solve_failed", {
+      type: error instanceof Error ? error.name : "UnknownError",
+      categories: error instanceof Error ? error.message.slice(0, 500) : "unknown"
+    });
     return context.json({ ok: false, error: "All configured solver models failed." }, 502);
   }
 });
