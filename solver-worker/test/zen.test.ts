@@ -85,6 +85,10 @@ describe("Zen response handling", () => {
     );
     const chatBody = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(chatBody.reasoning_effort).toBe("high");
+    expect(chatBody.stream).toBe(true);
+    expect(chatBody.stream_options).toEqual({ include_usage: true });
+    expect(chatBody.max_tokens).toBe(32000);
+    expect(chatBody.temperature).toBeUndefined();
   });
 
   it("normalizes a successful Responses API result", async () => {
@@ -102,6 +106,64 @@ describe("Zen response handling", () => {
     expect(result.model).toBe("muse-spark-1.3-contributor-free");
     expect(result.code).toBe(validSolution);
     const responsesBody = JSON.parse(fetchMock.mock.calls[0][1].body as string);
-    expect(responsesBody.reasoning).toEqual({ effort: "high" });
+    expect(responsesBody.reasoning).toEqual({ effort: "xhigh", summary: "auto" });
+    expect(responsesBody.include).toEqual(["reasoning.encrypted_content"]);
+    expect(responsesBody.stream).toBe(true);
+    expect(responsesBody.store).toBe(false);
+    expect(responsesBody.max_output_tokens).toBe(32000);
+    expect(responsesBody.instructions).toBeUndefined();
+    expect(responsesBody.input).toEqual([
+      { role: "developer", content: expect.any(String) },
+      { role: "user", content: [{ type: "input_text", text: expect.any(String) }] }
+    ]);
+  });
+
+  it("parses streamed chat-completions deltas and usage", async () => {
+    const splitAt = validSolution.indexOf("public class");
+    const events = [
+      `data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: "hidden" } }] })}`,
+      `data: ${JSON.stringify({ choices: [{ delta: { content: validSolution.slice(0, splitAt) } }] })}`,
+      `data: ${JSON.stringify({ choices: [{ delta: { content: validSolution.slice(splitAt) } }] })}`,
+      `data: ${JSON.stringify({ choices: [{ delta: {}, message: { content: "" } }] })}`,
+      `data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 12, completion_tokens: 34 } })}`,
+      "data: [DONE]"
+    ].join("\n\n") + "\n\n";
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(events, { status: 200, headers: { "Content-Type": "text/event-stream" } })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await solveWithZen(sampleRequest, {
+      OPENCODE_API_KEY: "test-key",
+      ZEN_MODELS: "big-pickle"
+    });
+
+    expect(result.code).toContain("public class ClassRA2682241010202");
+    expect(result.usage).toEqual({ input: 12, output: 34 });
+  });
+
+  it("parses streamed Responses output deltas and terminal usage", async () => {
+    const splitAt = validSolution.indexOf("public class");
+    const events = [
+      `data: ${JSON.stringify({ type: "response.output_text.delta", delta: validSolution.slice(0, splitAt) })}`,
+      `data: ${JSON.stringify({ type: "response.output_text.delta", delta: validSolution.slice(splitAt) })}`,
+      `data: ${JSON.stringify({
+        type: "response.completed",
+        response: { output: [], usage: { input_tokens: 22, output_tokens: 44 }
+      }})}`,
+      "data: [DONE]"
+    ].join("\n\n") + "\n\n";
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(events, { status: 200, headers: { "Content-Type": "text/event-stream" } })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await solveWithZen(sampleRequest, {
+      OPENCODE_API_KEY: "test-key",
+      ZEN_MODELS: "muse-spark-1.3-contributor-free"
+    });
+
+    expect(result.code).toContain("public class ClassRA2682241010202");
+    expect(result.usage).toEqual({ input: 22, output: 44 });
   });
 });

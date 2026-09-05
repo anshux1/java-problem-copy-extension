@@ -32,7 +32,9 @@ After deployment, register the `workers.dev` subdomain if Cloudflare prompts for
 Configuration lives in `wrangler.toml`:
 
 - `ZEN_MODELS` is a comma-separated fallback chain restricted by the code's verified-free allowlist. The deployed default order starts with Muse Spark 1.3 Free, followed by Ling 3.0 Flash Fin, Nemotron 3.5 Lightning, Muse Spark 1.2, Nemotron 3 Ultra, MiMo V2.5, and Big Pickle.
-- Every model attempt requests the highest reasoning setting supported by its API (`reasoning_effort: "high"` for chat completions and `reasoning: { effort: "high" }` for Responses).
+- Every model attempt requests the highest verified reasoning setting for that model (`reasoning_effort: "high"` for the current chat free models and `reasoning: { effort: "xhigh", summary: "auto" }` for Muse Spark Responses).
+- Zen requests follow the OpenCode harness shape: both APIs use `stream: true`; chat requests include `stream_options.include_usage`, Responses requests use typed `input` message items, `store: false`, and `include: ["reasoning.encrypted_content"]`. The worker parses SSE and accepts a JSON response fallback.
+- The output ceiling is 32,000 tokens (the smallest current free-model catalog cap), replacing the old 5,000-token cap so high-effort reasoning has enough room to produce code. A model attempt can use up to 45 seconds, with a 58-second chain ceiling to stay inside the extension's 60-second request timeout.
 - `ALLOWED_ORIGIN` defaults to `*` for initial extension setup. Replace it with the installed extension origin where practical.
 - `OPENCODE_API_KEY` must be a Wrangler secret; never put it in `wrangler.toml` or extension files.
 

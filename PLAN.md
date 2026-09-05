@@ -50,7 +50,7 @@ Source of truth: `GET https://opencode.ai/zen/v1/models` + `https://opencode.ai/
 
 The display names above follow the latest free-model list supplied for this project. The `-contributor-free` suffix is the provider's API ID for both Muse Spark entries.
 
-Every attempt, including every fallback, requests the model's highest reasoning level (`high`). Chat models receive `reasoning_effort: "high"`; Responses models receive `reasoning: { "effort": "high" }`. This is provider configuration, not a client-side hint, so changing the model cannot silently lower reasoning.
+Every attempt, including every fallback, requests the highest verified reasoning level for that model. Chat models receive `reasoning_effort: "high"`; Muse Spark Responses models receive `reasoning: { "effort": "xhigh", "summary": "auto" }`. The worker streams both API variants, disables provider-side response storage, and caps generated output at 32,000 tokens so high-effort reasoning has room to finish.
 
 ### 3.2 Present in live `/models` but NOT in docs pricing table (treat as experimental)
 
@@ -83,8 +83,9 @@ curl https://opencode.ai/zen/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "big-pickle",
-    "temperature": 0.2,
-    "max_tokens": 5000,
+    "stream": true,
+    "stream_options": {"include_usage": true},
+    "max_tokens": 32000,
     "reasoning_effort": "high",
     "messages": [
       {"role": "system", "content": "You are a Java 11 solver. Return ONLY code in one ```java block."},
@@ -102,12 +103,20 @@ curl https://opencode.ai/zen/v1/responses \
   -H "Content-Type: application/json" \
   -d '{
     "model": "muse-spark-1.3-contributor-free",
-    "input": "Solve this Java problem... Return ONLY code",
-    "max_output_tokens": 5000,
-    "reasoning": {"effort": "high"}
+    "input": [
+      {"role": "developer", "content": "You are a Java solver..."},
+      {"role": "user", "content": [{"type": "input_text", "text": "Solve this Java problem... Return ONLY code"}]}
+    ],
+    "stream": true,
+    "store": false,
+    "max_output_tokens": 32000,
+    "reasoning": {"effort": "xhigh", "summary": "auto"},
+    "include": ["reasoning.encrypted_content"]
   }'
-# -> resp.output_text or resp.output[].content[].text, parse ```java inside
+# -> SSE response.output_text.delta events (or JSON fallback), parse ```java inside
 ```
+
+The request fields above mirror the OpenCode Zen adapter in the cloned `pi` harness. See [`OPEN_CODE_ZEN_AUDIT.md`](OPEN_CODE_ZEN_AUDIT.md) for the comparison and the live failure evidence.
 
 Worker must implement both parsers.
 
@@ -212,10 +221,11 @@ FREE_CHAIN = [
   "nemotron-3.5-lightning-free", "muse-spark-1.2-contributor-free",
   "nemotron-3-ultra-free", "mimo-v2.5-free", "big-pickle"
 ]
-REASONING_EFFORT = "high" for every chain attempt
+REASONING_EFFORT = "xhigh" for Muse Spark Responses attempts, "high" for the other verified free models
 
 for model in chain:
-  try fetch with a 24s per-model timeout (AbortSignal), capped at 58s total
+  try fetch with a 45s per-model timeout (AbortSignal), capped at 58s total
+  request both Zen APIs with stream=true; parse SSE deltas and retain JSON fallback
   if 429/5xx/timeout -> continue
   extract code via /```(?:java)?\n([\s\S]*?)```/ else raw
   strip language tag, trim
